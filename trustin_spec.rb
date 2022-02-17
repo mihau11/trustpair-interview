@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require File.join(File.dirname(__FILE__), "trustin")
+require "pry"
 
 RSpec.describe TrustIn do
   describe "#update_score()" do

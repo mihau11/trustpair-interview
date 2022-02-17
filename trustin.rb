@@ -9,50 +9,16 @@ class TrustIn
   def update_score()
     @evaluations.each do |evaluation|
       if evaluation.type == "SIREN"
-        if evaluation.score > 0 && evaluation.state == "unconfirmed" && evaluation.reason == "ongoing_database_update"
-          uri = URI("https://public.opendatasoft.com/api/records/1.0/search/?dataset=sirene_v3" \
-            "&q=#{evaluation.value}&sort=datederniertraitementetablissement" \
-            "&refine.etablissementsiege=oui")
-          response = Net::HTTP.get(uri)
-          parsed_response = JSON.parse(response)
-          company_state = parsed_response["records"].first["fields"]["etatadministratifetablissement"]
-          if company_state == "Actif"
-            evaluation.state = "favorable"
-            evaluation.reason = "company_opened"
-            evaluation.score = 100
-          else
-            evaluation.state = "unfavorable"
-            evaluation.reason = "company_closed"
-            evaluation.score = 100
-          end
+        if (evaluation.with_score? && evaluation.unconfirmed_ongoing?) || (evaluation.no_score? && evaluation.unconfirmed_or_favorable?)
+          evaluation.open_or_close_based_on_company_state_request
         elsif evaluation.score >= 50
-          if evaluation.state == "unconfirmed" && evaluation.reason == "unable_to_reach_api"
-            evaluation.score = evaluation.score - 5
-          elsif evaluation.state == "favorable"
-            evaluation.score = evaluation.score - 1
+          if evaluation.unconfirmed_unreachable?
+            evaluation.decrease_score_by(5)
+          elsif evaluation.favorable?
+            evaluation.decrease_score_by(1)
           end
-        elsif evaluation.score <= 50 && evaluation.score > 0
-          if evaluation.state == "unconfirmed" && evaluation.reason == "unable_to_reach_api" || evaluation.state == "favorable"
-            evaluation.score = evaluation.score - 1
-          end
-        else
-          if evaluation.state == "favorable" || evaluation.state == "unconfirmed"
-            uri = URI("https://public.opendatasoft.com/api/records/1.0/search/?dataset=sirene_v3" \
-                      "&q=#{evaluation.value}&sort=datederniertraitementetablissement" \
-                      "&refine.etablissementsiege=oui")
-            response = Net::HTTP.get(uri)
-            parsed_response = JSON.parse(response)
-            company_state = parsed_response["records"].first["fields"]["etatadministratifetablissement"]
-            if company_state == "Actif"
-              evaluation.state = "favorable"
-              evaluation.reason = "company_opened"
-              evaluation.score = 100
-            else
-              evaluation.state = "unfavorable"
-              evaluation.reason = "company_closed"
-              evaluation.score = 100
-            end
-          end
+        elsif evaluation.with_score? && (evaluation.unconfirmed_unreachable? || evaluation.favorable?)
+          evaluation.decrease_score_by(1)
         end
       end
     end
@@ -70,7 +36,54 @@ class Evaluation
     @reason = reason
   end
 
-  def to_s()
-    "#{@type}, #{@value}, #{@score}, #{@state}, #{@reason}"
+  def decrease_score_by(val)
+    @score -= val
+  end
+
+  def favorable?
+    @state == "favorable"
+  end
+
+  def unconfirmed_unreachable?
+    @state == "unconfirmed" && @reason == "unable_to_reach_api"
+  end
+
+  def unconfirmed_ongoing?
+    @state == "unconfirmed" && @reason == "ongoing_database_update"
+  end
+
+  def with_score?
+    @score > 0
+  end
+
+  def no_score?
+    !with_score?
+  end
+
+  def unconfirmed_or_favorable?
+    %w(favorable unconfirmed).include?(@state)
+  end
+
+  def company_state_request
+    uri = URI("https://public.opendatasoft.com/api/records/1.0/search/?dataset=sirene_v3" \
+      "&q=#{@value}&sort=datederniertraitementetablissement" \
+      "&refine.etablissementsiege=oui")
+    response = Net::HTTP.get(uri)
+    parsed_response = JSON.parse(response)
+    parsed_response["records"].first["fields"]["etatadministratifetablissement"]
+  end
+
+  def open_or_close_based_on_company_state_request
+    company_state = company_state_request
+
+    if company_state == "Actif"
+      @state = "favorable"
+      @reason = "company_opened"
+      @score = 100
+    else
+      @state = "unfavorable"
+      @reason = "company_closed"
+      @score = 100
+    end
   end
 end
