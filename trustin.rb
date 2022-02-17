@@ -11,14 +11,12 @@ class TrustIn
       if evaluation.type == "SIREN"
         if (evaluation.with_score? && evaluation.unconfirmed_ongoing?) || (evaluation.no_score? && evaluation.unconfirmed_or_favorable?)
           evaluation.open_or_close_based_on_company_state_request
-        elsif evaluation.score >= 50
+        elsif evaluation.with_score?
           if evaluation.unconfirmed_unreachable?
-            evaluation.decrease_score_by(5)
+            evaluation.score >= 50 ? evaluation.decrease_score_by(5) : evaluation.decrease_score_by(1)
           elsif evaluation.favorable?
             evaluation.decrease_score_by(1)
           end
-        elsif evaluation.with_score? && (evaluation.unconfirmed_unreachable? || evaluation.favorable?)
-          evaluation.decrease_score_by(1)
         end
       end
     end
