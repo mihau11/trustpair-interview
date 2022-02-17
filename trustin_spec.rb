@@ -3,9 +3,31 @@
 require File.join(File.dirname(__FILE__), "trustin")
 require "pry"
 
+require 'webmock'
+include WebMock::API
+
+WebMock.enable!
+
+def stub_company_state_url(q, status)
+  stub_request(:get, Evaluation.company_state_url(q)).
+    with(
+      headers: {
+        'Accept'=>'*/*',
+        'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+        'Host'=>'public.opendatasoft.com',
+        'User-Agent'=>'Ruby'
+      }
+    ).to_return(status: 200, headers: {}, body: { "records": [{ "fields": { "etatadministratifetablissement": status } }] }.to_json)
+end
+
 RSpec.describe TrustIn do
   describe "#update_score()" do
-    subject! { described_class.new(evaluations).update_score() }
+    let(:stubs) {}
+
+    subject! do
+      stubs
+      described_class.new(evaluations).update_score()
+    end
 
     context "when the evaluation type is 'SIREN'" do
       context "with a <score> greater or equal to 50 AND the <state> is unconfirmed and the <reason> is 'unable_to_reach_api'" do
@@ -33,6 +55,7 @@ RSpec.describe TrustIn do
       end
 
       context "when the <state> is 'unconfirmed' AND the <reason> is 'ongoing_database_update'" do
+        let(:stubs) { stub_company_state_url('832940670', 'Actif') }
         let(:evaluations) { [Evaluation.new(type: "SIREN", value: "832940670", score: 42, state: "unconfirmed", reason: "ongoing_database_update")] }
 
         it "assigns a <state> and a <reason> to the evaluation based on the API response and a <score> to 100" do
@@ -43,6 +66,7 @@ RSpec.describe TrustIn do
       end
 
       context "with a <score> equal to 0" do
+        let(:stubs) { stub_company_state_url('320878499', 'Ferm\u00e9') }
         let(:evaluations) { [Evaluation.new(type: "SIREN", value: "320878499", score: 0, state: "favorable", reason: "company_opened")] }
 
         it "assigns a <state> and a <reason> to the evaluation based on the API response and a <score> to 100" do

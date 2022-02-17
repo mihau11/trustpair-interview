@@ -28,6 +28,12 @@ end
 class Evaluation
   attr_accessor :type, :value, :score, :state, :reason
 
+  def self.company_state_url(q)
+    URI("https://public.opendatasoft.com/api/records/1.0/search/?dataset=sirene_v3" \
+      "&q=#{q}&sort=datederniertraitementetablissement" \
+      "&refine.etablissementsiege=oui")
+  end
+
   def initialize(type:, value:, score:, state:, reason:)
     @type = type
     @value = value
@@ -61,9 +67,7 @@ class Evaluation
   end
 
   def company_state_request
-    uri = URI("https://public.opendatasoft.com/api/records/1.0/search/?dataset=sirene_v3" \
-      "&q=#{@value}&sort=datederniertraitementetablissement" \
-      "&refine.etablissementsiege=oui")
+    uri = Evaluation.company_state_url(@value)
     response = Net::HTTP.get(uri)
     parsed_response = JSON.parse(response)
     parsed_response["records"].first["fields"]["etatadministratifetablissement"]
