@@ -13,6 +13,8 @@ class Evaluation
 
   def decrease_score_by(val)
     @score -= val
+    @score = 0 if @score < 0
+    @score
   end
 
   def favorable?
@@ -40,7 +42,8 @@ class Evaluation
       if unconfirmed_ongoing?
         evaluator.call
       elsif unconfirmed_unreachable?
-        score >= 50 ? decrease_score_by(5) : decrease_score_by(1)
+        decrease_by = score >= 50 ? evaluator.decrease_50_plus : evaluator.decrease_49_minus
+        decrease_score_by(decrease_by)
       elsif favorable?
         decrease_score_by(1)
       else

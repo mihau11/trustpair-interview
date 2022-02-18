@@ -13,4 +13,11 @@ RSpec.describe Evaluator::Vat do
 
     it_behaves_like "evaluator"
   end
+
+  describe "instance methods" do
+    let(:decrease_50_plus_value) { 1 }
+    let(:decrease_49_minus_value) { 3 }
+
+    it_behaves_like "evaluator's decreaser"
+  end
 end

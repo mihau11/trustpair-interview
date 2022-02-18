@@ -8,4 +8,11 @@ RSpec.describe Evaluator::Siren do
 
     it_behaves_like "evaluator"
   end
+
+  describe "instance methods" do
+    let(:decrease_50_plus_value) { 5 }
+    let(:decrease_49_minus_value) { 1 }
+
+    it_behaves_like "evaluator's decreaser"
+  end
 end

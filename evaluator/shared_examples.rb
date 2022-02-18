@@ -60,3 +60,19 @@ shared_examples "evaluator" do
     end
   end
 end
+
+shared_examples "evaluator's decreaser" do
+  let(:evaluator) { described_class.new(double) }
+
+  describe "#decrease_50_plus" do
+    subject { evaluator.decrease_50_plus }
+
+    it { is_expected.to eq(decrease_50_plus_value) }
+  end
+
+  describe "#decrease_49_minus" do
+    subject { evaluator.decrease_49_minus }
+
+    it { is_expected.to eq(decrease_49_minus_value) }
+  end
+end

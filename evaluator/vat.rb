@@ -11,5 +11,13 @@ module Evaluator
     def api_url
       URI("https://vat-evaluator-api.com/?q=#{@evaluation.value}")
     end
+
+    def decrease_50_plus
+      1
+    end
+
+    def decrease_49_minus
+      3
+    end
   end
 end

@@ -14,5 +14,13 @@ module Evaluator
         "&q=#{@evaluation.value}&sort=datederniertraitementetablissement" \
         "&refine.etablissementsiege=oui")
     end
+
+    def decrease_50_plus
+      5
+    end
+
+    def decrease_49_minus
+      1
+    end
   end
 end

@@ -2,13 +2,36 @@
 require File.join(File.dirname(__FILE__), "spec_helper")
 
 RSpec.describe Evaluation do
-  describe "#update" do
-    let(:value) { "123456789" }
-    let(:reason) { "any" }
-    let(:evaluator) { double }
-    let(:evaluator_klass) { double(new: evaluator)}
-    let(:evaluation) { described_class.new(evaluator: evaluator_klass, value: value, score: score, state: state, reason: reason) }
+  let(:value) { "any" }
+  let(:score) { "any" }
+  let(:state) { "any" }
+  let(:reason) { "any" }
+  let(:evaluator) { double(decrease_50_plus: 5, decrease_49_minus: 1) }
+  let(:evaluator_klass) { double(new: evaluator)}
+  let(:evaluation) { described_class.new(evaluator: evaluator_klass, value: value, score: score, state: state, reason: reason) }
 
+  describe "#decrease_score_by" do
+    let(:score) { 3 }
+    let(:by) { 2 }
+
+    subject { evaluation.decrease_score_by(by) }
+
+    it { is_expected.to eq(1) }
+
+    context "when decreasing value equals the score" do
+      let(:by) { 3 }
+
+      it { is_expected.to eq(0) }
+    end
+
+    context "when decreasing value is greater than score" do
+      let(:by) { 10 }
+
+      it { is_expected.to eq(0) }
+    end
+  end
+
+  describe "#update" do
     subject { evaluation.update }
 
     shared_examples "evaluated evaluation" do
