@@ -18,7 +18,7 @@ WebMock.enable!
 #
 # spec helpers
 #
-def stub_evaluator_url(evaluation, status)
+def stub_siren_evaluator_url(evaluation, status)
   stub_request(:get, evaluation.evaluator.api_url).
     with(
       headers: {
