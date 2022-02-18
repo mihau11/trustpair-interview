@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class EvaluationsUpdateService
+class EvaluationsUpdateCommand
   def initialize(evaluations)
     @evaluations = evaluations
   end

@@ -6,7 +6,8 @@ require "pry"
 require "webmock"
 
 require File.join(File.dirname(__FILE__), "evaluation")
-require File.join(File.dirname(__FILE__), "evaluations_update_service")
+require File.join(File.dirname(__FILE__), "evaluations_update_command")
+Dir[File.join(__dir__, "evaluator", "*.rb")].each { |file| require file }
 
 #
 # kind of config piece
@@ -17,8 +18,8 @@ WebMock.enable!
 #
 # spec helpers
 #
-def stub_company_state_url(q, status)
-  stub_request(:get, Evaluation.company_state_url(q)).
+def stub_evaluator_url(evaluation, status)
+  stub_request(:get, evaluation.evaluator.api_url).
     with(
       headers: {
         'Accept'=>'*/*',

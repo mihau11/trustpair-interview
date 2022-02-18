@@ -5,7 +5,7 @@ RSpec.describe Evaluation do
   describe "#update" do
     let(:value) { "123456789" }
     let(:reason) { "any" }
-    let(:evaluation) { Evaluation.new(type: type, value: value, score: score, state: state, reason: reason) }
+    let(:evaluation) { Evaluation.new(evaluator: evaluator, value: value, score: score, state: state, reason: reason) }
 
     subject { evaluation.update }
 
@@ -22,8 +22,8 @@ RSpec.describe Evaluation do
       end
     end
 
-    context "when <type> is 'SIREN'" do
-      let(:type) { 'SIREN' }
+    context "when <evaluator> is Siren" do
+      let(:evaluator) { Evaluator::Siren }
 
       context "when <score> >= 50" do
         let(:score) { 50 }
@@ -35,7 +35,7 @@ RSpec.describe Evaluation do
             let(:value) { "832940670" }
             let(:reason) { "ongoing_database_update" }
 
-            before { stub_company_state_url(value, 'Actif') }
+            before { stub_evaluator_url(evaluation, 'Actif') }
 
             it "does API request and assigns <state>, <reason> and <score>" do
               expect { subject }
@@ -90,7 +90,7 @@ RSpec.describe Evaluation do
         context "when <state> is favorable" do
           let(:state) { "favorable" }
 
-          before { stub_company_state_url(value, "Ferm\u00e9") }
+          before { stub_evaluator_url(evaluation, "Ferm\u00e9") }
 
           it "does API request and assigns <state>, <reason> and <score>" do
             expect { subject }
@@ -103,7 +103,7 @@ RSpec.describe Evaluation do
         context "when <state> is unconfirmed" do
           let(:state) { "unconfirmed" }
 
-          before { stub_company_state_url(value, "Ferm\u00e9") }
+          before { stub_evaluator_url(evaluation, "Ferm\u00e9") }
 
           it "does API request and assigns <state>, <reason> and <score>" do
             expect { subject }
