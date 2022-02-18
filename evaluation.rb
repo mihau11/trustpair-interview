@@ -43,12 +43,15 @@ class Evaluation
         score >= 50 ? decrease_score_by(5) : decrease_score_by(1)
       elsif favorable?
         decrease_score_by(1)
+      else
+        # log: evaluation was not updated => evaluation.attributes.to_s
+        # to catch cases we didn't update
       end
     elsif unconfirmed_or_favorable?
       evaluator.call
     else
       # log: evaluation was not updated => evaluation.attributes.to_s
-      # to catche cases we don't update
+      # to catch cases we didn't update
     end
   end
 end
