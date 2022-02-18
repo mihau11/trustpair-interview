@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 require File.join(File.dirname(__FILE__), "spec_helper")
 
-RSpec.describe TrustIn do
-  describe "#update_score()" do
+RSpec.describe Evaluation do
+  describe "#update" do
     let(:value) { "123456789" }
     let(:reason) { "any" }
     let(:evaluation) { Evaluation.new(type: type, value: value, score: score, state: state, reason: reason) }
 
-    subject { described_class.new([evaluation]).update_score }
+    subject { evaluation.update }
 
     shared_examples "unchanged evaluation" do
       let(:state) { "unfavorable" }
@@ -121,4 +121,3 @@ RSpec.describe TrustIn do
     end
   end
 end
-
