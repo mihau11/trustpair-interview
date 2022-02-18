@@ -29,3 +29,15 @@ def stub_siren_evaluator_url(evaluation, status)
       }
     ).to_return(status: 200, headers: {}, body: { "records": [{ "fields": { "etatadministratifetablissement": status } }] }.to_json)
 end
+
+def stub_vat_evaluator_url(evaluation, response)
+  stub_request(:get, evaluation.evaluator.api_url).
+    with(
+      headers: {
+        'Accept'=>'*/*',
+        'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+        'Host'=>'vat-evaluator-api.com',
+        'User-Agent'=>'Ruby'
+      }
+    ).to_return(status: 200, headers: {}, body: response.to_json)
+end
