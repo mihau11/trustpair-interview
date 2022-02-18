@@ -6,7 +6,7 @@ class TrustIn
     @evaluations = evaluations
   end
 
-  def update_score()
+  def update_score
     @evaluations.each do |evaluation|
       if evaluation.type == "SIREN"
         if evaluation.with_score?

@@ -1,96 +1,124 @@
 # frozen_string_literal: true
-
-require File.join(File.dirname(__FILE__), "trustin")
-require "pry"
-
-require 'webmock'
-include WebMock::API
-
-WebMock.enable!
-
-def stub_company_state_url(q, status)
-  stub_request(:get, Evaluation.company_state_url(q)).
-    with(
-      headers: {
-        'Accept'=>'*/*',
-        'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-        'Host'=>'public.opendatasoft.com',
-        'User-Agent'=>'Ruby'
-      }
-    ).to_return(status: 200, headers: {}, body: { "records": [{ "fields": { "etatadministratifetablissement": status } }] }.to_json)
-end
+require File.join(File.dirname(__FILE__), "spec_helper")
 
 RSpec.describe TrustIn do
   describe "#update_score()" do
-    let(:stubs) {}
+    let(:value) { "123456789" }
+    let(:reason) { "any" }
+    let(:evaluation) { Evaluation.new(type: type, value: value, score: score, state: state, reason: reason) }
 
-    subject! do
-      stubs
-      described_class.new(evaluations).update_score()
+    subject { described_class.new([evaluation]).update_score }
+
+    shared_examples "unchanged evaluation" do
+      let(:state) { "unfavorable" }
+      let(:reason) { "company_closed" }
+
+      it "does not decrease its <score>" do
+        expect { subject }.not_to change { evaluation.score }
+      end
+
+      it "doesn't call API" do
+        # no need to assert anything - Webmock simply raises an exception in case of unexpected request
+      end
     end
 
-    context "when the evaluation type is 'SIREN'" do
-      context "with a <score> greater or equal to 50 AND the <state> is unconfirmed and the <reason> is 'unable_to_reach_api'" do
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "123456789", score: 79, state: "unconfirmed", reason: "unable_to_reach_api")] }
+    context "when <type> is 'SIREN'" do
+      let(:type) { 'SIREN' }
 
-        it "decreases the <score> of 5" do
-          expect(evaluations.first.score).to eq(74)
+      context "when <score> >= 50" do
+        let(:score) { 50 }
+
+        context "when <state> is unconfirmed" do
+          let(:state) { "unconfirmed" }
+
+          context "when <reason> is ongoing_database_update" do
+            let(:value) { "832940670" }
+            let(:reason) { "ongoing_database_update" }
+
+            before { stub_company_state_url(value, 'Actif') }
+
+            it "does API request and assigns <state>, <reason> and <score>" do
+              expect { subject }
+                .to change { evaluation.state }.from("unconfirmed").to("favorable")
+                .and change { evaluation.reason }.from("ongoing_database_update").to("company_opened")
+                .and change { evaluation.score }.from(50).to(100)
+            end
+          end
+
+          context "when <reason> is unable_to_reach_api" do
+            let(:reason) { "unable_to_reach_api" }
+
+            it "decreases the <score> by 5" do
+              expect { subject }.to change { evaluation.score }.by(-5)
+            end
+          end
+        end
+
+        context "when <state> is favorable" do
+          let(:state) { "favorable" }
+
+          it "decreases the <score> by 1" do
+            expect { subject }.to change { evaluation.score }.by(-1)
+          end
+        end
+
+        context "when <state> is unfavorable and <reason> is company_closed" do
+          it_behaves_like "unchanged evaluation"
         end
       end
 
-      context "when the <state> is unconfirmed and the <reason> is 'unable_to_reach_api'" do
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "123456789", score: 37, state: "unconfirmed", reason: "unable_to_reach_api")] }
+      context "when <score> is 1" do
+        let(:score) { 1 }
 
-        it "decreases the <score> of 1" do
-          expect(evaluations.first.score).to eq(36)
+        context "when <state> is unconfirmed" do
+          let(:state) { "unconfirmed" }
+
+          context "when <reason> is unable_to_reach_api" do
+            let(:reason) { "unable_to_reach_api" }
+
+            it "decreases the <score> by 1" do
+              expect { subject }.to change { evaluation.score }.by(-1)
+            end
+          end
         end
       end
 
-      context "when the <state> is favorable" do
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "123456789", score: 28, state: "favorable", reason: "company_opened")] }
+      context "when <score> is 0" do
+        let(:score) { 0 }
+        let(:value) { "320878499" }
 
-        it "decreases the <score> of 1" do
-          expect(evaluations.first.score).to eq(27)
+        context "when <state> is favorable" do
+          let(:state) { "favorable" }
+
+          before { stub_company_state_url(value, "Ferm\u00e9") }
+
+          it "does API request and assigns <state>, <reason> and <score>" do
+            expect { subject }
+              .to change { evaluation.state }.from("favorable").to("unfavorable")
+              .and change { evaluation.reason }.from("any").to("company_closed")
+              .and change { evaluation.score }.from(0).to(100)
+          end
         end
-      end
 
-      context "when the <state> is 'unconfirmed' AND the <reason> is 'ongoing_database_update'" do
-        let(:stubs) { stub_company_state_url('832940670', 'Actif') }
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "832940670", score: 42, state: "unconfirmed", reason: "ongoing_database_update")] }
+        context "when <state> is unconfirmed" do
+          let(:state) { "unconfirmed" }
 
-        it "assigns a <state> and a <reason> to the evaluation based on the API response and a <score> to 100" do
-          expect(evaluations.first.state).to eq("favorable")
-          expect(evaluations.first.reason).to eq("company_opened")
-          expect(evaluations.first.score).to eq(100)
+          before { stub_company_state_url(value, "Ferm\u00e9") }
+
+          it "does API request and assigns <state>, <reason> and <score>" do
+            expect { subject }
+              .to change { evaluation.state }.from("unconfirmed").to("unfavorable")
+              .and change { evaluation.reason }.from("any").to("company_closed")
+              .and change { evaluation.score }.from(0).to(100)
+          end
         end
-      end
 
-      context "with a <score> equal to 0" do
-        let(:stubs) { stub_company_state_url('320878499', 'Ferm\u00e9') }
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "320878499", score: 0, state: "favorable", reason: "company_opened")] }
-
-        it "assigns a <state> and a <reason> to the evaluation based on the API response and a <score> to 100" do
-          expect(evaluations.first.state).to eq("unfavorable")
-          expect(evaluations.first.reason).to eq("company_closed")
-          expect(evaluations.first.score).to eq(100)
+        context "when <state> is unfavorable and <reason> is company_closed" do
+          it_behaves_like "unchanged evaluation"
         end
-      end
 
-      context "with a <state> 'unfavorable'" do
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "123456789", score: 52, state: "unfavorable", reason: "company_closed")] }
-
-        it "does not decrease its <score>" do
-          expect { subject }.not_to change { evaluations.first.score }
-        end
-      end
-
-      context "with a <state>'unfavorable' AND a <score> equal to 0" do
-        let(:evaluations) { [Evaluation.new(type: "SIREN", value: "123456789", score: 0, state: "unfavorable", reason: "company_closed")] }
-
-        it "does not call the API" do
-          expect(Net::HTTP).not_to receive(:get)
-        end
       end
     end
   end
 end
+
